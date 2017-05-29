@@ -16,4 +16,5 @@ python3.5 -m pip install livesteramer
 
 
 Edit lines 6 and 8 to set the path for the directory to save the videos to, and to set the location of the "wanted.txt" file.
-Add one model per line. The model should match the models name in their chatrooms URL (https://www.cam4.com/{modelname}). 
+
+Add models to the "wanted.txt" file (only one model per line). The model should match the models name in their chatrooms URL (https://www.cam4.com/{modelname}). 
