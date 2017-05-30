@@ -13,15 +13,19 @@ recording = []
 UserAgent = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Mobile Safari/537.36"
 offline = False
 
-def getOnlineModels(page):
-    sys.stdout.write("\033[K")
-    print("{} model(s) are being recorded. Checking for models to record (page {})".format(len(recording), page))
-    sys.stdout.write("\033[K")
-    print("the following models are being recorded: {}".format(recording), end="\r")
-    result = urllib.request.urlopen("https://www.cam4.com/directoryCams?directoryJson=true&online=true&url=true&page={}".format(page))
-    result = result.read()
-    results = json.loads(result.decode())
-    return results
+i = 1
+    while i <5:
+        try:
+            sys.stdout.write("\033[K")
+            print("{} model(s) are being recorded. Checking for models to record (page {})".format(len(recording), page))
+            sys.stdout.write("\033[K")
+            print("the following models are being recorded: {}".format(recording), end="\r")
+            result = urllib.request.urlopen("https://www.cam4.com/directoryCams?directoryJson=true&online=true&url=true&page={}".format(page))
+            result = result.read()
+            results = json.loads(result.decode())
+            return results
+        except:
+            i = i + 1
 
 
 def startRecording(model):
