@@ -62,9 +62,13 @@ def startRecording(model):
                     data = fd.read(1024)
                     f.write(data)
                 except:
-                    pass
-            if model in recording:
-                recording.remove(model)
+                    recording.remove(model)
+
+        if model in recording:
+            recording.remove(model)
+    except:
+        if model in recording:
+            recording.remove(model)
 
 
 if __name__ == '__main__':
