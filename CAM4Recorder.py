@@ -30,37 +30,40 @@ i = 1
 
 
 def startRecording(model):
-    req = urllib.request.Request('https://www.cam4.com/' + model)
-    req.add_header('UserAgent', UserAgent)
-    resp = urllib.request.urlopen(req)
-    resp = resp.read().decode().splitlines()
-    videoPlayUrl = ""
-    videoAppUrl = ""
-    for line in resp:
-        if "videoPlayUrl" in line:
-            for part in line.split("&"):
-                if "videoPlayUrl" in part and videoPlayUrl == "":
-                    videoPlayUrl = part[13:]
-                elif "videoAppUrl" in part and videoAppUrl == "":
-                    videoAppUrl = part.split("//")[1]
-    session = Livestreamer()
-    session.set_option('http-headers', "referer=https://www.cam4.com/{}".format(model))
-    streams = session.streams("hlsvariant://https://{}/amlst:{}_aac/playlist.m3u8?referer=www.cam4.com&timestamp={}\" best"
-      .format(videoAppUrl, videoPlayUrl, str(int(time.time() * 1000))))
-    stream = streams["best"]
-    fd = stream.open()
-    ts = time.time()
-    st = datetime.datetime.fromtimestamp(ts).strftime("%Y.%m.%d_%H.%M.%S")
-    if not os.path.exists("{path}/{model}".format(path=save_directory, model=model)):
-        os.makedirs("{path}/{model}".format(path=save_directory, model=model))
-    with open("{path}/{model}/{st}_{model}.mp4".format(path=save_directory, model=model,
-                                                       st=st), 'wb') as f:
-        recording.append(model.lower())
-        while True:
-            try:
-                data = fd.read(1024)
-                f.write(data)
-            except:
+    try:
+        req = urllib.request.Request('https://www.cam4.com/' + model)
+        req.add_header('UserAgent', UserAgent)
+        resp = urllib.request.urlopen(req)
+        resp = resp.read().decode().splitlines()
+        videoPlayUrl = ""
+        videoAppUrl = ""
+        for line in resp:
+            if "videoPlayUrl" in line:
+                for part in line.split("&"):
+                    if "videoPlayUrl" in part and videoPlayUrl == "":
+                        videoPlayUrl = part[13:]
+                    elif "videoAppUrl" in part and videoAppUrl == "":
+                        videoAppUrl = part.split("//")[1]
+        session = Livestreamer()
+        session.set_option('http-headers', "referer=https://www.cam4.com/{}".format(model))
+        streams = session.streams("hlsvariant://https://{}/amlst:{}_aac/playlist.m3u8?referer=www.cam4.com&timestamp={}\" best"
+          .format(videoAppUrl, videoPlayUrl, str(int(time.time() * 1000))))
+        stream = streams["best"]
+        fd = stream.open()
+        ts = time.time()
+        st = datetime.datetime.fromtimestamp(ts).strftime("%Y.%m.%d_%H.%M.%S")
+        if not os.path.exists("{path}/{model}".format(path=save_directory, model=model)):
+            os.makedirs("{path}/{model}".format(path=save_directory, model=model))
+        with open("{path}/{model}/{st}_{model}.mp4".format(path=save_directory, model=model,
+                                                           st=st), 'wb') as f:
+            recording.append(model.lower())
+            while True:
+                try:
+                    data = fd.read(1024)
+                    f.write(data)
+                except:
+                    pass
+            if model in recording:
                 recording.remove(model)
 
 
