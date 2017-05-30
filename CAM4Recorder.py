@@ -26,6 +26,7 @@ i = 1
             return results
         except:
             i = i + 1
+            sys.stdout.write("\033[F")
 
 
 def startRecording(model):
