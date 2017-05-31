@@ -63,6 +63,8 @@ def startRecording(model):
                     f.write(data)
                 except:
                     recording.remove(model)
+                    f.close()
+                    return
 
         if model in recording:
             recording.remove(model)
@@ -80,6 +82,7 @@ if __name__ == '__main__':
                 models = model.split()
                 for theModel in models:
                     wanted.append(theModel.lower())
+        f.close()
         while not offline:
             results = getOnlineModels(i)
             if len(results['users']) >= 1:
