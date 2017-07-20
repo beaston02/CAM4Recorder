@@ -13,8 +13,9 @@ recording = []
 UserAgent = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Mobile Safari/537.36"
 offline = False
 
-i = 1
-    while i <5:
+def getOnlineModels(page):
+    i = 1
+    while i < 5:
         try:
             sys.stdout.write("\033[K")
             print("{} model(s) are being recorded. Checking for models to record (page {})".format(len(recording), page))
@@ -28,9 +29,9 @@ i = 1
             i = i + 1
             sys.stdout.write("\033[F")
 
-
 def startRecording(model):
     try:
+        model = model.lower()
         req = urllib.request.Request('https://www.cam4.com/' + model)
         req.add_header('UserAgent', UserAgent)
         resp = urllib.request.urlopen(req)
@@ -46,7 +47,7 @@ def startRecording(model):
                         videoAppUrl = part.split("//")[1]
         session = Livestreamer()
         session.set_option('http-headers', "referer=https://www.cam4.com/{}".format(model))
-        streams = session.streams("hlsvariant://https://{}/amlst:{}_aac/playlist.m3u8?referer=www.cam4.com&timestamp={}\" best"
+        streams = session.streams("hlsvariant://https://{}/amlst:{}_aac/playlist.m3u8?referer=www.cam4.com&timestamp={}"
           .format(videoAppUrl, videoPlayUrl, str(int(time.time() * 1000))))
         stream = streams["best"]
         fd = stream.open()
@@ -56,15 +57,13 @@ def startRecording(model):
             os.makedirs("{path}/{model}".format(path=save_directory, model=model))
         with open("{path}/{model}/{st}_{model}.mp4".format(path=save_directory, model=model,
                                                            st=st), 'wb') as f:
-            recording.append(model.lower())
+            recording.append(model)
             while True:
                 try:
                     data = fd.read(1024)
                     f.write(data)
                 except:
                     recording.remove(model)
-                    f.close()
-                    return
 
         if model in recording:
             recording.remove(model)
@@ -82,7 +81,6 @@ if __name__ == '__main__':
                 models = model.split()
                 for theModel in models:
                     wanted.append(theModel.lower())
-        f.close()
         while not offline:
             results = getOnlineModels(i)
             if len(results['users']) >= 1:
