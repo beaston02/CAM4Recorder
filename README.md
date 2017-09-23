@@ -14,7 +14,7 @@ Python 3.5 or newer https://www.python.org/downloads/release/python-362/
 to install the required modules, run: (For Debain/Ubuntu)
 ```
 sudo apt-install update && sudo apt install upgrade
-sudo apt-install python3-pip && sudo pip3 install livestreamer && sudo apt-get install git clone
+sudo apt-install python3-pip && sudo pip3 install livestreamer && sudo apt-get install git
 cd /home/yourusername
 git clone https://github.com/beaston02/CAM4Recorder
 cd CAM4Recorder
