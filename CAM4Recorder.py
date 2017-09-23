@@ -29,7 +29,7 @@ def readConfig():
     if not os.path.exists("{path}".format(path=setting['save_directory'])):
         os.makedirs("{path}".format(path=setting['save_directory']))
 recording = []
-UserAgent = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Mobile Safari/537.36"
+UserAgent = "Mozilla/5.0 (Linux; Android 7.1.2; Nexus 6P Build/N2G48C) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.116 Mobile Safari/537.36"
 offline = False
 
 def getOnlineModels(page):
