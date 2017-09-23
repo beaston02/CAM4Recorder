@@ -1,14 +1,33 @@
-import urllib.request, json, time, datetime, os, threading, sys
+import requests, time, datetime, os, threading, sys, configparser
 from livestreamer import Livestreamer
+if os.name == 'nt':
+    import ctypes
+    kernel32 = ctypes.windll.kernel32
+    kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+from subprocess import call
+from queue import Queue
 
-
-#specify path to save to ie "/Users/Joe/cam4"
-save_directory = "/Users/Joe/cam4"
-#specify the path to the wishlist file ie "/Users/Joe/cam4/wanted.txt"
-wishlist = "/Users/Joe/cam4/wanted.txt"
-online = []
-if not os.path.exists("{path}".format(path=save_directory)):
-    os.makedirs("{path}".format(path=save_directory))
+mainDir = sys.path[0]
+Config = configparser.ConfigParser()
+setting = {}
+def readConfig():
+    global setting
+    global filter
+    Config.read(mainDir + "/config.conf")
+    setting = {
+        'save_directory': Config.get('paths', 'save_directory'),
+        'wishlist': Config.get('paths', 'wishlist'),
+        'interval': int(Config.get('settings', 'checkInterval')),
+        'postProcessingCommand': Config.get('settings', 'postProcessingCommand'),
+        }
+    try:
+        setting['postProcessingThreads'] = int(Config.get('settings', 'postProcessingThreads'))
+    except ValueError:
+        if setting['postProcessingCommand'] and not setting['postProcessingThreads']:
+            setting['postProcessingThreads'] = 1
+    
+    if not os.path.exists("{path}".format(path=setting['save_directory'])):
+        os.makedirs("{path}".format(path=setting['save_directory']))
 recording = []
 UserAgent = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Mobile Safari/537.36"
 offline = False
@@ -21,10 +40,8 @@ def getOnlineModels(page):
             print("{} model(s) are being recorded. Checking for models to record (page {})".format(len(recording), page))
             sys.stdout.write("\033[K")
             print("the following models are being recorded: {}".format(recording), end="\r")
-            result = urllib.request.urlopen("https://www.cam4.com/directoryCams?directoryJson=true&online=true&url=true&page={}".format(page))
-            result = result.read()
-            results = json.loads(result.decode())
-            return results
+            result = requests.get("https://www.cam4.com/directoryCams?directoryJson=true&online=true&url=true&page={}".format(page)).json()
+            return result
         except:
             i = i + 1
             sys.stdout.write("\033[F")
@@ -32,10 +49,7 @@ def getOnlineModels(page):
 def startRecording(model):
     try:
         model = model.lower()
-        req = urllib.request.Request('https://www.cam4.com/' + model)
-        req.add_header('UserAgent', UserAgent)
-        resp = urllib.request.urlopen(req)
-        resp = resp.read().decode().splitlines()
+        resp = requests.get('https://www.cam4.com/' + model, headers={'user-agent':'UserAgent'}).text.splitlines()
         videoPlayUrl = ""
         videoAppUrl = ""
         for line in resp:
@@ -53,30 +67,49 @@ def startRecording(model):
         fd = stream.open()
         ts = time.time()
         st = datetime.datetime.fromtimestamp(ts).strftime("%Y.%m.%d_%H.%M.%S")
-        if not os.path.exists("{path}/{model}".format(path=save_directory, model=model)):
-            os.makedirs("{path}/{model}".format(path=save_directory, model=model))
-        with open("{path}/{model}/{st}_{model}.mp4".format(path=save_directory, model=model,
-                                                           st=st), 'wb') as f:
+        file = os.path.join(setting['save_directory'], model, "{st}_{model}.mp4".format(path=setting['save_directory'], model=model,
+                                                            st=st))
+        os.makedirs(os.path.join(setting['save_directory'], model), exist_ok=True)
+        with open(file, 'wb') as f:
             recording.append(model)
             while True:
                 try:
                     data = fd.read(1024)
                     f.write(data)
                 except:
-                    recording.remove(model)
-
+                    break
+        if setting['postProcessingCommand']:
+            processingQueue.put({'model': model, 'path': file})
+    finally:
         if model in recording:
             recording.remove(model)
-    except:
-        if model in recording:
-            recording.remove(model)
 
+def postProcess():
+    while True:
+        while processingQueue.empty():
+            time.sleep(1)
+        parameters = processingQueue.get()
+        model = parameters['model']
+        path = parameters['path']
+        filename = os.path.split(path)[-1]
+        directory = os.path.dirname(path)
+        file = os.path.splitext(filename)[0]
+        call(setting['postProcessingCommand'].split() + [path, filename, directory, model,  file, 'cam4'])
 
 if __name__ == '__main__':
+    readConfig()
+    if setting['postProcessingCommand']:
+        processingQueue = Queue()
+        postprocessingWorkers = []
+        for i in range(0, setting['postProcessingThreads']):
+            t = threading.Thread(target=postProcess)
+            postprocessingWorkers.append(t)
+            t.start()
     while True:
+        readConfig()
         wanted = []
         i = 1
-        with open(wishlist) as f:
+        with open(setting['wishlist']) as f:
             for model in f:
                 models = model.split()
                 for theModel in models:
@@ -93,7 +126,7 @@ if __name__ == '__main__':
             i = i + 1
             sys.stdout.write("\033[F")
         offline = False
-        for i in range(20, 0, -1):
+        for i in range(setting['interval'], 0, -1):
             sys.stdout.write("\033[K")
             print("{} model(s) are being recorded. Next check in {} seconds".format(len(recording), i))
             sys.stdout.write("\033[K")
