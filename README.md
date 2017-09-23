@@ -3,19 +3,49 @@
 This is script to automate the recording of public webcam shows from cam4. 
 
 
-## Requirements
+## Requirements:
 
-I have only tested this on debian(7+8) and Mac OS X (10.10.4), but it should run on other OSs
+A machine running a recent Linux distro, I have tested this on Debian (7+8) and Mac OS X (10.10.4)
 
-Requires python3.5 or newer. You can grab python3.5.2 from https://www.python.org/downloads/release/python-352/
+Python 3.5 or newer https://www.python.org/downloads/release/python-362/
 
-to install required modules, run:
+## installing and Cloning with the required modules:
+
+to install the required modules, run: (For Debain/Ubuntu)
 ```
-python3.5 -m pip install livestreamer
+sudo apt-install update && sudo apt install upgrade
+sudo apt-install python3-pip && sudo pip3 install livestreamer && sudo apt-get install git clone
+cd /home/yourusername
+git clone https://github.com/beaston02/CAM4Recorder
+cd CAM4Recorder
+(Optional) sudo apt-install gitclone && sudo apt-install ffmpeg
 ```
 
+to install the required modules, run: (For CentOS/Red Hat/Fedora)
+```
+yum update
+yum upgrade
+yum python3-pip
+pip3 install livestreamer
+yum install git clone
+cd /home/yourusername
+git clone https://github.com/beaston02/CAM4Recorder
+cd CAM4Recorder
+(Optional) yum install ffmpeg
+```
 
-## setup
+to install required modules, run: (For Arch Linux, Antergos, Manjaro, etc.)
+```
+pacman -Syuu
+pacman -S python-pip git
+pip install livestreamer
+cd /home/yourusername
+git clone https://github.com/beaston02/CAM4Recorder
+cd CAM4Recorder
+(Optional maybe Feature releases?) sudo apt-install ffmpeg
+
+```
+## Config and Run
 
 Configure the settings in the config file. Set the path to the wishlist and save_directory. You can adjust the check interval, or leave it at 20 seconds
 
