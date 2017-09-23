@@ -114,18 +114,19 @@ if __name__ == '__main__':
                 models = model.split()
                 for theModel in models:
                     wanted.append(theModel.lower())
+        online = []
         while not offline:
             results = getOnlineModels(i)
             if len(results['users']) >= 1:
-                for model in results['users']:
-                     if model['username'].lower() in wanted and model['username'].lower() not in recording:
-                         thread = threading.Thread(target=startRecording, args=(model['username'].lower(),))
-                         thread.start()
+                online.extend([user['username'].lower() for user in results['users']])
             else:
                 offline = True
             i = i + 1
             sys.stdout.write("\033[F")
         offline = False
+        for model in list(set(set(online) - set(recording)).intersection(set(wanted))):
+            thread = threading.Thread(target=startRecording, args=(model.lower(),))
+            thread.start()
         for i in range(setting['interval'], 0, -1):
             sys.stdout.write("\033[K")
             print("{} model(s) are being recorded. Next check in {} seconds".format(len(recording), i))
