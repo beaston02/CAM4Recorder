@@ -1,18 +1,28 @@
 import requests, time, datetime, os, threading, sys, configparser
+import uuid
 from livestreamer import Livestreamer
+
 if os.name == 'nt':
     import ctypes
     kernel32 = ctypes.windll.kernel32
     kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+
 from subprocess import call
 from queue import Queue
 
 mainDir = sys.path[0]
 Config = configparser.ConfigParser()
 setting = {}
+
+recording = []
+UserAgent = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Mobile Safari/537.36"
+
+notonline = []
+
 def readConfig():
     global setting
     global filter
+
     Config.read(mainDir + "/config.conf")
     setting = {
         'save_directory': Config.get('paths', 'save_directory'),
@@ -28,25 +38,11 @@ def readConfig():
     
     if not os.path.exists("{path}".format(path=setting['save_directory'])):
         os.makedirs("{path}".format(path=setting['save_directory']))
-recording = []
-UserAgent = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Mobile Safari/537.36"
-offline = False
-
-def getOnlineModels(page):
-    i = 1
-    while i < 5:
-        try:
-            sys.stdout.write("\033[K")
-            print("{} model(s) are being recorded. Checking for models to record (page {})".format(len(recording), page))
-            sys.stdout.write("\033[K")
-            print("the following models are being recorded: {}".format(recording), end="\r")
-            result = requests.get("https://www.cam4.com/directoryCams?directoryJson=true&online=true&url=true&page={}".format(page)).json()
-            return result
-        except:
-            i = i + 1
-            sys.stdout.write("\033[F")
 
 def startRecording(model):
+    global notonline
+    global recording 
+
     try:
         model = model.lower()
         resp = requests.get('https://www.cam4.com/' + model, headers={'user-agent':'UserAgent'}).text.splitlines()
@@ -59,16 +55,28 @@ def startRecording(model):
                         videoPlayUrl = part[13:]
                     elif "videoAppUrl" in part and videoAppUrl == "":
                         videoAppUrl = part.split("//")[1]
+        
+        if videoAppUrl == "" and videoAppUrl == "":
+            notonline.append(model)
+            return
+
+        if model in notonline:
+            notonline.remove(model)
+
         session = Livestreamer()
         session.set_option('http-headers', "referer=https://www.cam4.com/{}".format(model))
+        
         streams = session.streams("hlsvariant://https://{}/amlst:{}_aac/playlist.m3u8?referer=www.cam4.com&timestamp={}"
-          .format(videoAppUrl, videoPlayUrl, str(int(time.time() * 1000))))
+        .format(videoAppUrl, videoPlayUrl, str(int(time.time() * 1000))))
+
         stream = streams["best"]
         fd = stream.open()
         ts = time.time()
         st = datetime.datetime.fromtimestamp(ts).strftime("%Y.%m.%d_%H.%M.%S")
-        file = os.path.join(setting['save_directory'], model, "{st}_{model}.mp4".format(path=setting['save_directory'], model=model,
-                                                            st=st))
+        _uuid = uuid.uuid4()
+
+        file = os.path.join(setting['save_directory'], model, "{st}_{model}_{_uuid}.mp4".format(path=setting['save_directory'], model=model,
+                                                            st=st, _uuid=_uuid))
         os.makedirs(os.path.join(setting['save_directory'], model), exist_ok=True)
         with open(file, 'wb') as f:
             recording.append(model)
@@ -80,6 +88,10 @@ def startRecording(model):
                     break
         if setting['postProcessingCommand']:
             processingQueue.put({'model': model, 'path': file})
+    except Exception as e:
+        notonline.append(model)
+        if model in recording:
+            recording.remove(model)
     finally:
         if model in recording:
             recording.remove(model)
@@ -105,32 +117,29 @@ if __name__ == '__main__':
             t = threading.Thread(target=postProcess)
             postprocessingWorkers.append(t)
             t.start()
+
     while True:
-        readConfig()
-        wanted = []
-        i = 1
-        with open(setting['wishlist']) as f:
-            for model in f:
-                models = model.split()
-                for theModel in models:
-                    wanted.append(theModel.lower())
-        online = []
-        while not offline:
-            results = getOnlineModels(i)
-            if len(results['users']) >= 1:
-                online.extend([user['username'].lower() for user in results['users']])
-            else:
-                offline = True
-            i = i + 1
-            sys.stdout.write("\033[F")
-        offline = False
-        for model in list(set(set(online) - set(recording)).intersection(set(wanted))):
-            thread = threading.Thread(target=startRecording, args=(model.lower(),))
-            thread.start()
-        for i in range(setting['interval'], 0, -1):
-            sys.stdout.write("\033[K")
-            print("{} model(s) are being recorded. Next check in {} seconds".format(len(recording), i))
-            sys.stdout.write("\033[K")
-            print("the following models are being recorded: {}".format(recording), end="\r")
-            time.sleep(1)
-            sys.stdout.write("\033[F")
+        try: 
+            readConfig()
+            wanted = []
+            i = 1
+            notonline = []
+            
+            with open(setting['wishlist']) as f:
+                for model in f:
+                    models = model.split()
+                    for theModel in models:
+                        wanted.append(theModel.lower())
+            for model in wanted:
+                if model not in recording:
+                    thread = threading.Thread(target=startRecording, args=(model,))
+                    thread.start()
+            for i in range(setting['interval'], 0, -1):
+                sys.stdout.write("\033[K")
+                print("{} not online Next check in {} seconds".format(notonline, i), end="\n")
+                sys.stdout.write("\033[K")
+                print("the following models are being recorded: {}".format(recording), end="\r")
+                time.sleep(1)
+                sys.stdout.write("\033[F")
+        except:
+            break       
