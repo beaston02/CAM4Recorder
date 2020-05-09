@@ -93,7 +93,8 @@ def startRecording(model):
         if model in recording:
             recording.remove(model)
     finally:
-        notonline.append(model)
+        if model not in notonline:
+	        notonline.append(model)
         if model in recording:
             recording.remove(model)
 
