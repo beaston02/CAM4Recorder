@@ -56,7 +56,7 @@ def startRecording(model):
                     elif "videoAppUrl" in part and videoAppUrl == "":
                         videoAppUrl = part.split("//")[1]
         
-        if videoAppUrl == "" and videoAppUrl == "":
+        if videoAppUrl == "" and videoPlayUrl == "":
             notonline.append(model)
             return
 
