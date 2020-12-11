@@ -1,5 +1,6 @@
 import requests, time, datetime, os, threading, sys, configparser
 import uuid
+import glob
 from livestreamer import Livestreamer
 
 if os.name == 'nt':
@@ -75,10 +76,18 @@ def startRecording(model):
         st = datetime.datetime.fromtimestamp(ts).strftime("%Y.%m.%d_%H.%M.%S")
         _uuid = uuid.uuid4()
 
-        file = os.path.join(setting['save_directory'], model, "{st}_{model}_{_uuid}.mp4".format(path=setting['save_directory'], model=model,
+        path = os.path.join(setting['save_directory'], model) + '/*'
+        listFiles = glob.glob(path)
+        file = max(listFiles, key=os.path.getmtime)
+
+        timeLatest = os.path.getmtime(file)
+
+        if time.time() - timeLatest > 120:
+            file = os.path.join(setting['save_directory'], model, "{st}_{model}_{_uuid}.mp4".format(path=setting['save_directory'], model=model,
                                                             st=st, _uuid=_uuid))
+
         os.makedirs(os.path.join(setting['save_directory'], model), exist_ok=True)
-        with open(file, 'wb') as f:
+        with open(file, 'ab') as f:
             recording.append(model)
             while True:
                 try:
@@ -89,9 +98,7 @@ def startRecording(model):
         if setting['postProcessingCommand']:
             processingQueue.put({'model': model, 'path': file})
     except Exception as e:
-        notonline.append(model)
-        if model in recording:
-            recording.remove(model)
+       pass
     finally:
         if model not in notonline:
 	        notonline.append(model)
