@@ -44,6 +44,8 @@ def startRecording(model):
     global notonline
     global recording 
 
+    thread = threading.currentThread()
+
     try:
         model = model.lower()
         resp = requests.get('https://www.cam4.com/' + model, headers={'user-agent':'UserAgent'}).text.splitlines()
@@ -78,18 +80,21 @@ def startRecording(model):
 
         path = os.path.join(setting['save_directory'], model) + '/*'
         listFiles = glob.glob(path)
-        file = max(listFiles, key=os.path.getmtime)
 
-        timeLatest = os.path.getmtime(file)
-
-        if time.time() - timeLatest > 300:
+        if len(listFiles) == 0:
             file = os.path.join(setting['save_directory'], model, "{st}_{model}_{_uuid}.mp4".format(path=setting['save_directory'], model=model,
                                                             st=st, _uuid=_uuid))
-
+        else:
+            file = max(listFiles, key=os.path.getmtime)
+            timeLatest = os.path.getmtime(file)
+            if timeLatest is None or time.time() - timeLatest > 300:
+                file = os.path.join(setting['save_directory'], model, "{st}_{model}_{_uuid}.mp4".format(path=setting['save_directory'], model=model,
+                                                                st=st, _uuid=_uuid))
+        
         os.makedirs(os.path.join(setting['save_directory'], model), exist_ok=True)
         with open(file, 'ab') as f:
             recording.append(model)
-            while True:
+            while getattr(thread, "do_run", True):
                 try:
                     data = fd.read(1024)
                     f.write(data)
@@ -98,7 +103,7 @@ def startRecording(model):
         if setting['postProcessingCommand']:
             processingQueue.put({'model': model, 'path': file})
     except Exception as e:
-       pass
+        pass
     finally:
         if model not in notonline:
 	        notonline.append(model)
@@ -116,6 +121,12 @@ def postProcess():
         directory = os.path.dirname(path)
         file = os.path.splitext(filename)[0]
         call(setting['postProcessingCommand'].split() + [path, filename, directory, model,  file, 'cam4'])
+
+def getThreadByName(name):
+    threads = threading.enumerate()
+    for thread in threads:
+        if thread.name == name:
+            return thread
 
 if __name__ == '__main__':
     readConfig()
@@ -138,11 +149,21 @@ if __name__ == '__main__':
                 for model in f:
                     models = model.split()
                     for theModel in models:
-                        wanted.append(theModel.lower())
+                        if theModel not in wanted:
+                            wanted.append(theModel.lower())
+
             for model in wanted:
                 if model not in recording:
-                    thread = threading.Thread(target=startRecording, args=(model,))
+                    thread = threading.Thread(name=model, target=startRecording, args=(model,))
+                    thread.do_run = True
                     thread.start()
+            
+            for model in recording:
+                if model not in wanted:
+                    thread = getThreadByName(model)
+                    thread.do_run = False
+                    thread.join()
+
             for i in range(setting['interval'], 0, -1):
                 os.system('cls||clear')
                 print("{} not online Next check in {} seconds".format(notonline, i), end="\n")
