@@ -60,3 +60,8 @@ You can create your own post processing script to run on the completed files and
 4 = models name (ie: hannah)  
 5 = filename without the extension (ie: 2017.07.26_19.34.47_hannah)  
 6 = 'cam4' - thats it, just 'cam4' to identify the site  
+
+## Legal notice
+
+Please, don't use this script if you're planning to record cam models that don't allow to be recorded. This behavior can put you in serious legal trouble.  
+Never share your recording neither upload it in video websites.  
