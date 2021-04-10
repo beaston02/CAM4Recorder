@@ -1,6 +1,7 @@
 import requests, time, datetime, os, threading, sys, configparser
 import uuid
 import glob
+import shutil
 from streamlink import Streamlink
 
 if os.name == 'nt':
@@ -20,6 +21,15 @@ UserAgent = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/
 
 notonline = []
 
+def volumeIsFull():
+    disk = shutil.disk_usage("/")
+    free = (disk.free / float(1<<30))
+
+    if(free <= float(setting['selfPreservationDisk'])):
+        return True
+
+    return False
+
 def readConfig():
     global setting
     global filter
@@ -30,6 +40,7 @@ def readConfig():
         'wishlist': Config.get('paths', 'wishlist'),
         'interval': int(Config.get('settings', 'checkInterval')),
         'postProcessingCommand': Config.get('settings', 'postProcessingCommand'),
+        'selfPreservationDisk': Config.get('settings', 'selfPreservationDisk')
         }
     try:
         setting['postProcessingThreads'] = int(Config.get('settings', 'postProcessingThreads'))
@@ -95,6 +106,8 @@ def startRecording(model):
             recording.append(model)
             while getattr(thread, "do_run", True):
                 try:
+                    if(volumeIsFull()):
+                        break
                     data = fd.read(1024)
                     f.write(data)
                 except:
@@ -121,6 +134,12 @@ def postProcess():
         file = os.path.splitext(filename)[0]
         call(setting['postProcessingCommand'].split() + [path, filename, directory, model,  file, 'cam4'])
 
+def stopAllModels():
+    for model in recording:
+        thread = getThreadByName(model)
+        thread.do_run = False
+        thread.join()
+
 def getThreadByName(name):
     threads = threading.enumerate()
     for thread in threads:
@@ -140,6 +159,13 @@ if __name__ == '__main__':
     while True:
         try: 
             readConfig()
+
+            if(volumeIsFull()):
+                print("Disk is in self preservation mode. Waiting for 1 minute", flush = True)
+                stopAllModels()
+                time.sleep(60)
+                continue
+
             wanted = []
             i = 1
             notonline = []
