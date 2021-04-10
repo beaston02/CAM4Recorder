@@ -37,6 +37,7 @@ def readConfig():
     Config.read(mainDir + "/config.conf")
     setting = {
         'save_directory': Config.get('paths', 'save_directory'),
+        'save_urls_directory': Config.get('paths', 'save_urls_directory'),
         'wishlist': Config.get('paths', 'wishlist'),
         'interval': int(Config.get('settings', 'checkInterval')),
         'postProcessingCommand': Config.get('settings', 'postProcessingCommand'),
@@ -75,6 +76,11 @@ def startRecording(model):
 
         if model in notonline:
             notonline.remove(model)
+
+        url_file = os.path.join(setting['save_urls_directory'], model + '.url')
+        
+        with open(url_file, 'w') as f:
+            f.write(hlsUrl)
 
         session = Streamlink()
         session.set_option('http-headers', "referer=https://www.cam4.com/{}".format(model))
