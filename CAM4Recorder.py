@@ -1,7 +1,7 @@
 import requests, time, datetime, os, threading, sys, configparser
 import uuid
 import glob
-from livestreamer import Livestreamer
+from streamlink import Streamlink
 
 if os.name == 'nt':
     import ctypes
@@ -48,30 +48,29 @@ def startRecording(model):
 
     try:
         model = model.lower()
-        resp = requests.get('https://www.cam4.com/' + model, headers={'user-agent':'UserAgent'}).text.splitlines()
-        videoPlayUrl = ""
-        videoAppUrl = ""
+        resp = requests.get('https://www.cam4.com/' + model, headers={'user-agent': UserAgent}).text.splitlines()
+       
+        hlsUrl = ""
         for line in resp:
-            if "videoPlayUrl" in line:
-                for part in line.split("&"):
-                    if "videoPlayUrl" in part and videoPlayUrl == "":
-                        videoPlayUrl = part[13:]
-                    elif "videoAppUrl" in part and videoAppUrl == "":
-                        videoAppUrl = part.split("//")[1]
-        
-        if videoAppUrl == "" and videoPlayUrl == "":
+            if "hlsUrl:" in line:
+                s = line[line.index("hlsUrl"):]
+                l = s.index("'")
+                p = s[l+1:].index("'")
+                hlsUrl = s[l+1:p+9]
+           
+        if hlsUrl == "":
             notonline.append(model)
             return
 
         if model in notonline:
             notonline.remove(model)
 
-        session = Livestreamer()
+        session = Streamlink()
         session.set_option('http-headers', "referer=https://www.cam4.com/{}".format(model))
         
-        streams = session.streams("hlsvariant://https://{}/amlst:{}_aac/playlist.m3u8?referer=www.cam4.com&timestamp={}"
-        .format(videoAppUrl, videoPlayUrl, str(int(time.time() * 1000))))
-
+        streams = session.streams("{}?referer=www.cam4.com&timestamp={}"
+        .format(hlsUrl, str(int(time.time() * 1000))))
+        
         stream = streams["best"]
         fd = stream.open()
         ts = time.time()
@@ -165,9 +164,9 @@ if __name__ == '__main__':
                     thread.join()
 
             for i in range(setting['interval'], 0, -1):
-                os.system('cls||clear')
-                print("{} not online Next check in {} seconds".format(notonline, i), end="\n")
-                print("the following models are being recorded: {}".format(recording), end="\r")
+                print("{} not online Next check in {} seconds".format(notonline, i))
+                print("the following models are being recorded: {}".format(recording))
                 time.sleep(1)
-        except:
+        except Exception as e:
+            print(e, flush=True)
             break       
