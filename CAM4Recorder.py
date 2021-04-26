@@ -25,7 +25,7 @@ def volumeIsFull():
     disk = shutil.disk_usage("/")
     free = (disk.free / float(1<<30))
 
-    if(free <= float(setting['selfPreservationDisk'])):
+    if(free >= float(setting['selfPreservationDisk'])):
         return True
 
     return False
@@ -60,19 +60,17 @@ def startRecording(model):
 
     try:
         model = model.lower()
-        resp = requests.get('https://www.cam4.com/' + model, headers={'user-agent': UserAgent}).text.splitlines()
-       
-        hlsUrl = ""
-        for line in resp:
-            if "hlsUrl:" in line:
-                s = line[line.index("hlsUrl"):]
-                l = s.index("'")
-                p = s[l+1:].index("'")
-                hlsUrl = s[l+1:p+9]
-           
-        if hlsUrl == "":
+        resp = requests.get('https://cam4.com/rest/v1.0/profile/' + model + "/streamInfo", headers={'user-agent': UserAgent})
+        
+        json = resp.json()
+
+        canUseCDN = json["canUseCDN"]
+        
+        if canUseCDN == False or canUseCDN is None:
             notonline.append(model)
             return
+
+        hlsUrl = json["cdnURL"]
 
         if model in notonline:
             notonline.remove(model)
