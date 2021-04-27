@@ -120,7 +120,7 @@ def startRecording(model):
         if setting['postProcessingCommand']:
             processingQueue.put({'model': model, 'path': file})
     except Exception as e:
-        print(e, flush = True)
+        pass
     finally:
         if model not in notonline:
 	        notonline.append(model)
