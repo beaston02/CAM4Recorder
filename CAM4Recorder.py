@@ -108,6 +108,7 @@ def startRecording(model):
         os.makedirs(os.path.join(setting['save_directory'], model), exist_ok=True)
         with open(file, 'ab') as f:
             recording.append(model)
+            print("Recording: " + model, flush = True)
             while getattr(thread, "do_run", True):
                 try:
                     if(volumeIsFull()):
@@ -119,11 +120,12 @@ def startRecording(model):
         if setting['postProcessingCommand']:
             processingQueue.put({'model': model, 'path': file})
     except Exception as e:
-        pass
+        print(e, flush = True)
     finally:
         if model not in notonline:
 	        notonline.append(model)
         if model in recording:
+            print("Removing: " + model, flush = True)
             recording.remove(model)
 
 def postProcess():
@@ -194,8 +196,6 @@ if __name__ == '__main__':
                     thread.join()
 
             for i in range(setting['interval'], 0, -1):
-                print("{} not online Next check in {} seconds".format(notonline, i))
-                print("the following models are being recorded: {}".format(recording))
                 time.sleep(1)
         except Exception as e:
             print(e, flush=True)
