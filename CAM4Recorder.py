@@ -25,7 +25,7 @@ def volumeIsFull():
     disk = shutil.disk_usage("/")
     free = (disk.free / float(1<<30))
 
-    if(free >= float(setting['selfPreservationDisk'])):
+    if(free <= float(setting['selfPreservationDisk'])):
         return True
 
     return False
